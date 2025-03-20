@@ -7,7 +7,7 @@
  */
 
 // ====== Configuration and State ======
-const CONTENT_DEBUG = false;
+const CONTENT_DEBUG = true;
 let lastNotificationTime = 0;
 let lastNotificationMessage = '';
 const NOTIFICATION_COOLDOWN = 1000; // 1 second cooldown between same notifications
@@ -255,7 +255,7 @@ function injectAd(config, networkId) {
                 "keywords": category ? [`category=${category}`] : [],
             };
 
-            contentLogger.log("Request body:", requestBody);
+            contentLogger.log("Request body:", JSON.stringify(requestBody));
 
             const response = await fetch(DECISIONS_API_URL, {
                 method: 'POST',
@@ -273,11 +273,13 @@ function injectAd(config, networkId) {
                 return null;
             }
 
+            contentLogger.log("Response body:", JSON.stringify(data));
+
             // Store the ad ID to detect changes
             const newAdId = div.adId || div.contents[0]?.data?.customData?.adId || JSON.stringify(div.contents[0]?.data);
 
             // Save both the ad info and ID
-            imageURLs = [div.contents[0].data.imageUrl];
+            imageURLs = [extractImageurl(div.contents[0]?.data)];
             clickURLs = [div.clickUrl];
             impressionURLs = [div.impressionUrl];
             lastInjectedAd = newAdId;
@@ -289,6 +291,17 @@ function injectAd(config, networkId) {
         }
     }
 
+    function extractImageurl(data) {
+        if (!data || typeof data !== "object") return null;
+
+        // Iterate over object keys to find the first URL that resembles an image
+        for (const key in data) {
+            if (typeof data[key] === "string" && data[key].match(/\.(jpeg|jpg|gif|png|webp|svg)$/i)) {
+                return data[key]; // Return first found image URL
+            }
+        }
+        return null;
+    }
 
     /**
      * Remove any injected banner
